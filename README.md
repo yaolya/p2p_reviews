@@ -1,3 +1,3 @@
-порядок запуска:
-python3 server.py 
-python3 client.py 
+порядок запуска:  
+python3 server.py  
+python3 client.py  
