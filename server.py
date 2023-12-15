@@ -64,6 +64,9 @@ def create_combined_list(dictionary_list, dict_list_of_files, hostname, port_num
 def append_to_files_list(dictionary_list, filename, hostname):
     keys = ['Filename', 'Hostname']
     entry = [filename, hostname]
+    for d in dictionary_list:
+        if d['Filename'] == filename:
+            return dictionary_list
     dictionary_list.insert(0, dict(zip(keys, entry)))
     return dictionary_list
 
@@ -71,7 +74,9 @@ def append_to_files_list(dictionary_list, filename, hostname):
 def append_to_combined_list(dictionary_list, filename, hostname, port_number):
     keys = ['Filename', 'Hostname', 'Port Number']
     entry = [filename, hostname, str(port_number)]
-
+    for d in dictionary_list:
+        if d['Filename'] == filename:
+            return dictionary_list
     dictionary_list.insert(0, dict(zip(keys, entry)))
     return dictionary_list
 
