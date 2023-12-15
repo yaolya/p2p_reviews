@@ -9,13 +9,13 @@ import random
 from _thread import *
 
 
-def p2p_get_request(file_id, peer_host, peer_upload_port):
+def p2p_get_request(filename, peer_host, peer_upload_port):
     print(f"\nGET REQUEST TO PEER {peer_host} {peer_upload_port}\n")
     sct = socket.socket()
     sct.connect((peer_host, int(peer_upload_port)))
     p = int(sct.getsockname()[1])
     print(f"\nCONNECTED, owner's port: {p}\n")
-    message = p2p_request_message(file_id, host)
+    message = p2p_request_message(filename, host)
     sct.send(bytes(message, 'utf-8'))
     res = []
     while True:
@@ -25,10 +25,8 @@ def p2p_get_request(file_id, peer_host, peer_upload_port):
         res.append(packet)
     data_rec = pickle.loads(b"".join(res))
     print(f"\nPEER RESPONSE\n {data_rec}\n")
-    # my_data = data_rec.decode('utf-8')
     my_data = data_rec
     current_path = os.getcwd()
-    filename = "reviews" + file_id + ".txt"
     pm = platform.system()
     if pm == "Windows":
         filename = current_path + "\\files\\" + filename
@@ -39,8 +37,8 @@ def p2p_get_request(file_id, peer_host, peer_upload_port):
     sct.close()
 
 
-def p2p_response_message(file_id):
-    filename = "reviews" + str(file_id) + ".txt"
+def p2p_response_message(file):
+    filename = str(file)
     print(f"RESPONSE FILE NAME: {filename}")
     current_time = time.strftime("%a, %d %b %Y %X %Z", time.localtime())
     pm = platform.system()
@@ -62,20 +60,20 @@ def p2p_response_message(file_id):
     return message
 
 
-def p2p_request_message(file_id, host_name):
+def p2p_request_message(file, host_name):
     pm = platform.platform()
-    message = f"GET File {file_id} \nHost: {host_name} \nOS: {pm}"
-    return file_id
+    message = f"GET File {file} \nHost: {host_name} \nOS: {pm}"
+    return file
 
 
-def p2s_add_message(file_id, host_name, port_num, title):
-    message = f"ADD file {file_id} \nHost: {host_name} \nPort: {port_num} \nTitle: {title}"
-    return ["ADD", message, file_id, host_name, port_num, title]
+def p2s_add_message(file, host_name, port_num):
+    message = f"ADD file {file} \nHost: {host_name} \nPort: {port_num}"
+    return ["ADD", file, host_name, port_num]
 
 
-def p2s_lookup_message(file_id, host_name, port_num, title):
-    message = f"LOOKUP File {file_id} \nHost: {host_name} \nPort: {port_num} \nTitle: {title}"
-    return ["LOOKUP", message, file_id]
+def p2s_lookup_message(host_name, port_num):
+    message = f"LOOKUP File Host: {host_name} \nPort: {port_num}"
+    return ["LOOKUP", host_name, port_num]
 
 
 def p2s_list_request(host_name, port_num):
@@ -86,17 +84,12 @@ def p2s_list_request(host_name, port_num):
 def get_local_files():
     files_path = os.getcwd() + "/files"
     files = next(os.walk(files_path), (None, None, []))[2]
-    ids = []
-    for f in files:
-        ids.append(f[7:-4])
-    # files = [num[num.find("s") + 1:num.find(".")] for num in os.listdir(files_path) if 'files' in num]
-    return ids
+    return files
 
 
 def peer_information():
-    keys = ["FileID", "Filename"]
+    keys = ["Filename"]
     files = get_local_files()
-    titles = get_local_files()
     for num in files:
         entry = [num, "reviews"]
         dict_list_of_files.insert(0, dict(zip(keys, entry)))
@@ -110,6 +103,17 @@ def print_combined_list(dictionary_list, keys):
     print()
 
 
+def add_file(review, filename):
+    current_path = os.getcwd()
+    pm = platform.system()
+    if pm == "Windows":
+        filename = current_path + "\\files\\" + filename
+    else:
+        filename = current_path + "/files/" + filename
+    with open(filename, 'w') as file:
+        file.write(review)
+
+
 def get_user_input():
     user_input = input("> Enter ADD, LIST, LOOKUP, GET, or EXIT:  ")
     if user_input == "EXIT":
@@ -117,12 +121,13 @@ def get_user_input():
         s.send(message)
         s.close()
     elif user_input == "ADD":
-        user_input_file_id = input("> Enter the FileID: ")
-        user_input_filename = input("> Enter the Filename: ")
-        message = pickle.dumps(p2s_add_message(user_input_file_id, host, upload_port_num, user_input_filename))
+        user_input_filename = input("> Enter Filename: ")
+        user_input_review = input("> Enter Review: ")
+        message = pickle.dumps(p2s_add_message(user_input_filename, host, upload_port_num))
         s.send(message)
         server_data = s.recv(1024)
         print(f"\nRESPONSE FROM SERVER:\n {server_data.decode('utf-8')}\n")
+        add_file(user_input_review, user_input_filename)
         get_user_input()
     elif user_input == "LIST":
         message = pickle.dumps(p2s_list_request(host, port))
@@ -131,26 +136,26 @@ def get_user_input():
         print_combined_list(new_data[0], new_data[1])
         get_user_input()
     elif user_input == "GET":
-        user_input_file_id = input("> Enter the FileID: ")
-        user_input_filename = input("> Enter the Filename: ")
-        message = pickle.dumps(p2s_lookup_message(user_input_file_id, host, port, user_input_filename))
+        user_input_host = input("> Enter Peer Host: ")
+        user_input_port = input("> Enter Peer Port: ")
+        message = pickle.dumps(p2s_lookup_message(user_input_host, user_input_port))
         s.send(message)
         server_data = pickle.loads(s.recv(1024))
         print(f"\nRESPONSE FROM SERVER:\n {server_data}\n")
         print(server_data[0])
         if server_data[0]:
-            p2p_get_request(str(user_input_file_id), server_data[0]["Hostname"], server_data[0]["Port Number"])
+            p2p_get_request(str(server_data[0]["Filename"]), user_input_host, user_input_port)
         else:
             print(f"\nRESPONSE FROM SERVER:\n {server_data[1]}\n")  # print error
         get_user_input()
     elif user_input == "LOOKUP":
-        user_input_file_id = input("> Enter the FileID: ")
-        user_input_filename = input("> Enter the Filename: ")
-        message = pickle.dumps(p2s_lookup_message(user_input_file_id, host, port, user_input_filename))
+        user_input_host = input("> Enter Peer Host: ")
+        user_input_port = input("> Enter Peer Port: ")
+        message = pickle.dumps(p2s_lookup_message(user_input_host, user_input_port))
         s.send(message)
         server_data = pickle.loads(s.recv(1024))
         print(f"\nRESPONSE FROM SERVER:\n {server_data}")
-        keys = ['FileID', 'Filename', 'Hostname', 'Port Number']
+        keys = ['Filename', 'Hostname', 'Port Number']
         print_combined_list([server_data[0]], keys)
         get_user_input()
     else:
@@ -175,7 +180,7 @@ def p2p_listen_thread():
 upload_port_num = 65000 + random.randint(1, 500)  # generate a upload port randomly in 65000~65500
 dict_list_of_files = []
 s = socket.socket()
-host = socket.gethostname()
+host = socket.gethostbyname(socket.gethostname())
 port = 7734
 s.connect((host, port))
 owners_port = int(s.getsockname()[1])
