@@ -11,10 +11,13 @@ def p2s_lookup_response(file_id):
     current_time = time.strftime("%a, %d %b %Y %X %Z", time.localtime())
     pm = platform.platform()
     response = search_combined_dict(file_id)
+    
     if len(response) == 0:
         message = f"404 Not Found \nDate: {current_time} \nOS: {pm}"
     else:
         message = "200 OK"
+    print('response', response)
+    print('message', message)
     return response, message
 
 
@@ -73,7 +76,6 @@ def append_to_files_list(dictionary_list, file_id, filename, hostname):
 def append_to_combined_list(dictionary_list, file_id, filename, hostname, port_number):
     keys = ['FileID', 'Filename', 'Hostname', 'Port Number']
     entry = [str(file_id), filename, hostname, str(port_number)]
-
     dictionary_list.insert(0, dict(zip(keys, entry)))
     return dictionary_list
 
@@ -131,10 +133,11 @@ def client_thread(conn, address):
             conn.send(new_data)
         elif data[0] == "ADD":
             p2s_add_response(conn, data[1], data[4], address[0], data[3])
-            files_list = append_to_files_list(files_list, data[1], data[4], address[0])
-            combined_list = append_to_combined_list(combined_list, data[1], data[4], address[0], client_port)
-            print_dictionary(files_list, files_keys)
+            files_list = append_to_files_list(files_list, data[2], data[5], address[0])
+            combined_list = append_to_combined_list(combined_list, data[2], data[5], address[0], client_port)
+            print_dictionary(files_list, files_keys, "files")
         elif data[0] == "GET" or data[0] == "LOOKUP":
+            print("I'm in GET, data[2]:", data[2])
             new_data = pickle.dumps(p2s_lookup_response(data[2]))
             conn.send(new_data)
     peer_list = delete_peers_dictionary(peer_list, address[0])
@@ -143,6 +146,7 @@ def client_thread(conn, address):
     conn.close()
 
 
+    
 s = socket.socket()
 host = socket.gethostname()
 port = 7734

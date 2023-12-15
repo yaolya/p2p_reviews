@@ -7,6 +7,7 @@ import os
 import pickle
 import random
 from _thread import *
+import PySimpleGUI as sg
 
 
 def p2p_get_request(file_id, peer_host, peer_upload_port):
@@ -24,6 +25,7 @@ def p2p_get_request(file_id, peer_host, peer_upload_port):
             break
         res.append(packet)
     data_rec = pickle.loads(b"".join(res))
+    print('res', b"".join(res))
     print(f"\nPEER RESPONSE\n {data_rec}\n")
     # my_data = data_rec.decode('utf-8')
     my_data = data_rec
@@ -31,7 +33,7 @@ def p2p_get_request(file_id, peer_host, peer_upload_port):
     filename = "reviews" + file_id + ".txt"
     pm = platform.system()
     if pm == "Windows":
-        filename = current_path + "\\files\\" + filename
+        filename = current_path + "\\received_files\\" + filename
     else:
         filename = current_path + "/received_files/" + filename
     with open(filename, 'w') as file:
@@ -47,16 +49,16 @@ def p2p_response_message(file_id):
     m = filename.split()
     filename = "".join(m)
     if pm == "Windows":
-        filename = "files\\" + filename
+        filename = "\files\\" + filename
     else:
         filename = "files/" + filename
-    if os.path.exists(filename) == 0:
+    if os.path.exists(os.getcwd() + filename) == 0:
         message = f"404 Not Found \nDate: {current_time} \nOS: {pm}"
     else:
-        txt = open(filename)
+        txt = open(os.getcwd()+ filename)
         text = txt.read()
-        last_modified = time.ctime(os.path.getmtime(filename))
-        content_length = os.path.getsize(filename)
+        last_modified = 1110 #time.ctime(os.path.getmtime(filename))
+        content_length = 500 #os.path.getsize(filename)
         message = f"200 OK \nDate: {current_time} \nOS: {pm} \nLast-Modified: {last_modified} \nContent" \
                   f"-Length: {content_length} \nContent-Type: text/text \n{text}"
     return message
@@ -84,7 +86,7 @@ def p2s_list_request(host_name, port_num):
 
 
 def get_local_files():
-    files_path = os.getcwd() + "/files"
+    files_path = os.getcwd() + "\files"
     files = next(os.walk(files_path), (None, None, []))[2]
     ids = []
     for f in files:
@@ -137,9 +139,10 @@ def get_user_input():
         s.send(message)
         server_data = pickle.loads(s.recv(1024))
         print(f"\nRESPONSE FROM SERVER:\n {server_data}\n")
-        print(server_data[0])
+        # print(server_data[0])
         if server_data[0]:
             p2p_get_request(str(user_input_file_id), server_data[0]["Hostname"], server_data[0]["Port Number"])
+            print('I finished p2p_get_request')
         else:
             print(f"\nRESPONSE FROM SERVER:\n {server_data[1]}\n")  # print error
         get_user_input()
@@ -171,6 +174,27 @@ def p2p_listen_thread():
         c.send(pickle.dumps(p2p_response_message(data_p2p)))
         c.close()
 
+def graph():
+    while True:
+        event, values = window.read()
+        if event in (sg.WIN_CLOSED, 'Exit'):
+            break
+        if event == '-BUT_LIST-':
+            get_list()
+
+def get_list():
+    r = random.randint(1,100)
+    window['-TEXT_LIST-'].update("Peers: {}".format(r))
+
+layout = [[sg.Input(key='-TEXT_ADD-')],
+        [sg.Button('Add review',enable_events=True, key='-BUT_ADD-', font='Helvetica 16')],
+        [sg.Button('Get list of peers:',enable_events=True, key='-BUT_LIST-', font='Helvetica 16')],
+        [sg.Text('', size=(25, 1), key='-TEXT_LIST-', font='Helvetica 16')],
+        [sg.Input(key='-TEXT_GET-')],
+        [sg.Button('Get file from peer:',enable_events=True, key='-BUT_GET-', font='Helvetica 16')],
+        [sg.Button('EXIT',enable_events=True, key='-BUT_EXIT-', font='Helvetica 16')]]
+window = sg.Window('Client', layout, size=(500,500))
+
 
 upload_port_num = 65000 + random.randint(1, 500)  # generate a upload port randomly in 65000~65500
 dict_list_of_files = []
@@ -187,5 +211,9 @@ s.send(data)
 data = s.recv(1024)
 print(f"\nRESPONSE FROM SERVER:\n {data.decode('utf-8')}\n")
 s.close
+
+
 start_new_thread(p2p_listen_thread, ())
+start_new_thread(graph, ())
 get_user_input()
+window.close()
