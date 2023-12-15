@@ -11,6 +11,7 @@ def p2s_lookup_response(hostname, port_number):
     current_time = time.strftime("%a, %d %b %Y %X %Z", time.localtime())
     pm = platform.platform()
     response = search_combined_dict(hostname, port_number)
+    
     if len(response) == 0:
         message = f"404 Not Found \nDate: {current_time} \nOS: {pm}"
     else:
@@ -117,6 +118,7 @@ def client_thread(conn, address):
     data = pickle.loads(conn.recv(1024))
     print(f"\nRECEIVED DATA:\n {data}\n")
     client_port = data[0]
+    # generate the peers list and files list
     peer_list, peer_keys = create_peer_list(peer_list, address[0], data[0])
     print_dictionary(peer_list, peer_keys, "peers")
     files_list, files_keys = create_files_list(files_list, data[1], address[0])
@@ -145,6 +147,7 @@ def client_thread(conn, address):
     conn.close()
 
 
+    
 s = socket.socket()
 host = socket.gethostname()
 port = 7734
