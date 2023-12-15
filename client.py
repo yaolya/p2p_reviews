@@ -7,6 +7,7 @@ import os
 import pickle
 import random
 from _thread import *
+from pathlib import Path
 
 
 def p2p_get_request(filename, peer_host, peer_upload_port):
@@ -28,11 +29,12 @@ def p2p_get_request(filename, peer_host, peer_upload_port):
     my_data = data_rec
     current_path = os.getcwd()
     pm = platform.system()
+    # Path("/received_files").mkdir(exist_ok=True)
     if pm == "Windows":
-        filename = current_path + "\\files\\" + filename
+        filename = current_path + "\\received_files\\" + filename
     else:
         filename = current_path + "/received_files/" + filename
-    with open(filename, 'w') as file:
+    with open(filename, 'a+') as file:
         file.write(my_data)
     sct.close()
 
@@ -106,12 +108,13 @@ def print_combined_list(dictionary_list, keys):
 def add_file(review, filename):
     current_path = os.getcwd()
     pm = platform.system()
+    # Path("/files").mkdir(exist_ok=True)
     if pm == "Windows":
         filename = current_path + "\\files\\" + filename
     else:
         filename = current_path + "/files/" + filename
-    with open(filename, 'w') as file:
-        file.write(review)
+    with open(filename, 'a+') as file:
+        file.write("\n" + review)
 
 
 def get_user_input():
@@ -121,7 +124,7 @@ def get_user_input():
         s.send(message)
         s.close()
     elif user_input == "ADD":
-        user_input_filename = input("> Enter Filename: ")
+        user_input_filename = str(host) + str(upload_port_num) + ".txt"
         user_input_review = input("> Enter Review: ")
         message = pickle.dumps(p2s_add_message(user_input_filename, host, upload_port_num))
         s.send(message)
